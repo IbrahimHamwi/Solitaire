@@ -1,28 +1,34 @@
 require("main.language_fixes")
 
-
-
-suits = {"hearts", "diamonds", "clubs", "spades"}
+suits = {"_of_hearts", "_of_diamonds", "_of_clubs", "_of_spades"}
 values = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"}
 deck ={}
 
 
-
-
 function PlayCards()
   deck=generateDeck()-- test the cards in the deck
-  deck=ShuffleDeck()-- shuffle the deck 
+  deck=Shuffle(deck)
   -- for i=1, #deck do
   --   print(deck[i].value.." of "..deck[i].suit)
   -- end
 end  
 
-function ShuffleDeck()
-  for i=1, #deck do
-    local j = math.random(i, #deck)
-    deck[i], deck[j] = deck[j], deck[i]
-  end
-  return deck
+-- function ShuffleDeck()
+--   for i=1, #deck do
+--     local j = math.random(i, #deck)
+--     deck[i], deck[j] = deck[j], deck[i]
+--   end
+--   return deck
+-- end
+function Shuffle(deck)
+    local s = {}
+    for i = 1, #deck do s[i] = deck[i] end
+    for i = #deck, 2, -1 do
+        math.randomseed(os.time())
+        local j = math.random(i)
+        s[i], s[j] = s[j], s[i]
+    end
+    return s
 end
 
 function generateDeck()
@@ -37,14 +43,19 @@ end
 
 
 function init(self)
-
   PlayCards()
-  target_pos = go.get_world_position("/1")
-  print("target_pos")
-  print(target_pos.x)
-  print(target_pos.y)
-  create_and_animate_card(self, "ace_of_spades", target_pos.x, target_pos.y)
-
+  -- print("target_pos")
+  -- print(target_pos.x)
+  -- print(target_pos.y)
+  print("the first card is "..deck[1].value..deck[1].suit)
+  -- target_pos = go.get_world_position("/6")
+  -- create_and_animate_card(self, deck[1].value..deck[1].suit, target_pos.x, target_pos.y)
+  
+  for i=0,6 do
+    target_pos = go.get_world_position("/"..i)
+    offsety=i*30
+    create_and_animate_card_faceup(self, deck[i+1].value..deck[i+1].suit, target_pos.x, target_pos.y-offsety,i/10)
+  end
 end
 
 function on_input(self, action_id, action)
@@ -53,25 +64,40 @@ function on_input(self, action_id, action)
 	end
 end
 
-function create_and_animate_card(self, card_id, pos_x, pos_y)
+function create_and_animate_card_faceup(self, card_id, pos_x, pos_y,delay)
   print("create_and_animate_card")
-  print(card_id)
-  new_card_ids = collectionfactory.create("#cardCollectionfactory")
-  new_card = new_card_ids[hash("/Card")]
+  new_card_ids = collectionfactory.create("#cardFactory")
+  pprint(new_card_ids)
+  -- returns the identities of the spawned game objects as a table.
+  -- The table keys map the hash of the collection-local id of each object to the runtime id of each object
+  msg.post("/collection0/back#back_sprite", "disable")
+  new_card_face = new_card_ids[hash("/face")]-- get the face of the card
+  new_card_back = new_card_ids[hash("/back")]-- get the back of the card
+  go.set_scale(0.4, new_card_face)
+  go.set_scale(0.3, new_card_back)  -- scale the card
   print("Inside init")
- 
-  msg.post(new_card, "play_animation", {id = hash(card_id)})
-  delay = 1
-  duration = 2 
-  go.animate(new_card, "position.x", go.PLAYBACK_ONCE_FORWARD, pos_x, go.EASING_LINEAR, duration, delay)
-  go.animate(new_card, "position.y", go.PLAYBACK_ONCE_FORWARD, pos_y, go.EASING_LINEAR, duration, delay)
-
+ -------------------------------------  ------------------------------
+  msg.post(new_card_face, "play_animation", {id = hash(card_id)})
+  duration = 1 
+  go.animate(new_card_face, "position.x", go.PLAYBACK_ONCE_FORWARD, pos_x, go.EASING_LINEAR, duration, delay)
+  go.animate(new_card_face, "position.y", go.PLAYBACK_ONCE_FORWARD, pos_y, go.EASING_LINEAR, duration, delay)
 end
 
-
--- function set_sprite_on_card(self, new_card)
-
---   -- assign animation to the sprite component inside the Card collection that was loaded
---   msg.post(new_card, "play_animation", {id = hash("ace_of_spades")})
--- end
+function create_and_animate_card_facedown(self, card_id, pos_x, pos_y,delay)
+  print("create_and_animate_card")
+  new_card_ids = collectionfactory.create("#cardFactory")
+  pprint(new_card_ids)
+  -- returns the identities of the spawned game objects as a table.
+  -- The table keys map the hash of the collection-local id of each object to the runtime id of each object
+  new_card_face = new_card_ids[hash("/face")]-- get the face of the card
+  new_card_back = new_card_ids[hash("/back")]-- get the back of the card
+  go.set_scale(0.4, new_card_face)
+  go.set_scale(0.3, new_card_back)  -- scale the card
+  print("Inside init")
+ -------------------------------------  ------------------------------
+  msg.post(new_card_face, "play_animation", {id = hash(card_id)})
+  duration = 1 
+  go.animate(new_card_face, "position.x", go.PLAYBACK_ONCE_FORWARD, pos_x, go.EASING_LINEAR, duration, delay)
+  go.animate(new_card_face, "position.y", go.PLAYBACK_ONCE_FORWARD, pos_y, go.EASING_LINEAR, duration, delay)
+end
 
