@@ -114,13 +114,13 @@ embedded_instances {
 }
 embedded_instances {
   id: "Bottom"
-  children: "0"
   children: "1"
   children: "2"
   children: "3"
   children: "4"
   children: "5"
   children: "6"
+  children: "7"
   data: ""
   position {
     x: 0.0
@@ -215,7 +215,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "0"
+  id: "1"
   data: "embedded_components {\n"
   "  id: \"bottom6\"\n"
   "  type: \"sprite\"\n"
@@ -255,7 +255,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "1"
+  id: "2"
   data: "embedded_components {\n"
   "  id: \"bottom6\"\n"
   "  type: \"sprite\"\n"
@@ -295,7 +295,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "2"
+  id: "3"
   data: "embedded_components {\n"
   "  id: \"bottom6\"\n"
   "  type: \"sprite\"\n"
@@ -335,7 +335,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "3"
+  id: "4"
   data: "embedded_components {\n"
   "  id: \"bottom6\"\n"
   "  type: \"sprite\"\n"
@@ -399,7 +399,7 @@ embedded_instances {
   ""
   position {
     x: 2062.5
-    y: 800.0
+    y: 780.0
     z: 0.0
   }
   rotation {
@@ -439,7 +439,7 @@ embedded_instances {
   ""
   position {
     x: 1380.0
-    y: 800.0
+    y: 780.0
     z: 0.0
   }
   rotation {
@@ -519,7 +519,7 @@ embedded_instances {
   ""
   position {
     x: 722.5
-    y: 795.0
+    y: 780.0
     z: 0.0
   }
   rotation {
@@ -535,7 +535,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "4"
+  id: "5"
   data: "embedded_components {\n"
   "  id: \"bottom6\"\n"
   "  type: \"sprite\"\n"
@@ -575,7 +575,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "5"
+  id: "6"
   data: "embedded_components {\n"
   "  id: \"bottom6\"\n"
   "  type: \"sprite\"\n"
@@ -615,7 +615,7 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "6"
+  id: "7"
   data: "embedded_components {\n"
   "  id: \"bottom6\"\n"
   "  type: \"sprite\"\n"
