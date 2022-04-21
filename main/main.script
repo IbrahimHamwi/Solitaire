@@ -53,17 +53,22 @@ function init(self)
   print("the first card is "..deck[1].value..deck[1].suit)
   -- target_pos = go.get_world_position("/6")
   -- create_and_animate_card(self, deck[1].value..deck[1].suit, target_pos.x, target_pos.y)
-  
+  iteration=0
+
   for i=1,7 do
     for j=i,7 do
+      -- iteration = iteration + 1
+      -- print("iteration "..iteration)
       target_pos = go.get_world_position("/"..j)
       offsety=(i-1)*60
-      create_and_animate_card(self, deck[1].value..deck[1].suit, target_pos.x, target_pos.y-offsety,i/10)
+      isopened = i==j
+      create_and_animate_card(self, deck[1].value..deck[1].suit, target_pos.x, target_pos.y-offsety,i/10,isopened)
       table.remove(deck,1)
-      -- msg.post("/collection"..(i-1).."/back#back_sprite", "disable")
       -- msg.post("/collection"..i.."/back#back_sprite", "enable")
-      -- msg.post("/collection"..(i-1).."/back#back_sprite", "enable")
-      -- msg.post("/collection"..(i-1).."/face#face_sprite", "disable")
+      
+      
+      -- msg.post("/collection"..(iteration-1).."/back#back_sprite", "disable")
+      -- msg.post("/collection"..(iteration-1).."/face#face_sprite", "enable")
     end
   end
 end
@@ -76,21 +81,29 @@ function on_input(self, action_id, action)
 	end
 end
 
-function create_and_animate_card(self, card_id, pos_x, pos_y,delay)
+function create_and_animate_card(self, card_id, pos_x, pos_y,delay,isopened)
   print("create_and_animate_card")
   new_card_ids = collectionfactory.create("#cardFactory")
-  pprint(new_card_ids)
+  -- pprint(new_card_ids)
   -- returns the identities of the spawned game objects as a table.
   -- The table keys map the hash of the collection-local id of each object to the runtime id of each object
+  new_card = new_card_ids[hash("/Card")]
   new_card_face = new_card_ids[hash("/face")]-- get the face of the card
   new_card_back = new_card_ids[hash("/back")]-- get the back of the card
   go.set_scale(0.4, new_card_face)
   go.set_scale(0.3, new_card_back)  -- scale the card
   print("Inside init")
- -------------------------------------  ------------------------------
+  -------------------------------------  ------------------------------
+  if isopened==true then
+      msg.post(new_card_back, "disable")
+      msg.post(new_card_face, "enable")
+  else
+      msg.post(new_card_back, "enable")
+      msg.post(new_card_face, "disable")
+  end
   msg.post(new_card_face, "play_animation", {id = hash(card_id)})
   duration = 1.0 
-  go.animate(new_card_face, "position.x", go.PLAYBACK_ONCE_FORWARD, pos_x, go.EASING_LINEAR, duration, delay)
-  go.animate(new_card_face, "position.y", go.PLAYBACK_ONCE_FORWARD, pos_y, go.EASING_LINEAR, duration, delay)
+  go.animate(new_card, "position.x", go.PLAYBACK_ONCE_FORWARD, pos_x, go.EASING_LINEAR, duration, delay)
+  go.animate(new_card, "position.y", go.PLAYBACK_ONCE_FORWARD, pos_y, go.EASING_LINEAR, duration, delay)
 end
 
