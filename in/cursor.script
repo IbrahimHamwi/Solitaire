@@ -1,0 +1,338 @@
+--- Refer to cursor.md for documentation
+
+local cursor = require "in.cursor"
+
+go.property("action_id", hash("touch"))
+go.property("drag", true)
+go.property("drag_threshold", 20)
+go.property("event_only_drag", false)
+go.property("drag_lock_x", false)
+go.property("drag_lock_y", false)
+go.property("collisionobject_filter", hash(""))
+go.property("acquire_input_focus", false)
+go.property("notify_own_gameobject", true)
+
+local COLLISION_RESPONSE = hash("collision_response")
+local INPUT = hash("input")
+local EMPTY_FILTER = hash("")
+
+local action_pos = vmath.vector3()
+local function handle_input(self, action_id, action)
+	-- ignore accelerometer
+	if not action_id and action.acc_x then
+		return
+	end
+	action_pos.x = action.x
+	action_pos.y = action.y
+	self.action = action
+	-- mouse movement
+	if not action_id then
+		go.set_position(action_pos)
+		-- click or finger touching screen
+	elseif action_id == self.action_id then
+		if action.pressed then
+			self.touch = true
+			self.pressed = true
+			self.skip_frame = true
+		elseif action.released then
+			self.touch = false
+			self.released = true
+			self.skip_frame = true
+		end
+		go.set_position(action_pos)
+	end
+end
+
+local function is_mobile()
+	local sys_info = sys.get_sys_info()
+	if sys_info.system_name == "Android" or sys_info.system_name == "iPhone OS" then
+		return true
+	elseif sys_info.user_agent:find("Android") then
+		return true
+	elseif sys_info.user_agent:find("iPhone") or sys_info.user_agent:find("iPad") then
+		return true
+	end
+	return false
+end
+
+local function clear_drag_state(self)
+	self.state.dragging = false
+	self.state.dragging_cancelled = nil
+	self.state.dragging_mode = nil
+	self.action.origin_x = 0
+	self.action.origin_y = 0
+end
+
+local function clear_pressed_state(self)
+	self.state.pressed = nil
+	self.state.pressed_id = nil
+	self.state.pressed_group = nil
+end
+
+local function clear_over_state(self)
+	self.state.over_id = nil
+	self.state.over_group = nil
+end
+
+function init(self)
+	cursor.init()
+	if self.acquire_input_focus then
+		msg.post(".", "acquire_input_focus")
+	end
+
+	self.mobile = is_mobile()
+
+	self.collision_id = nil
+	self.collision_group = nil
+	self.pressed = false
+	self.released = false
+
+	self.action = {}
+
+	self.state = {
+		pressed = false,
+		dragging = false,
+		over_id = nil,
+	}
+end
+
+function final(self)
+	cursor.final()
+end
+
+local function go_exists(id)
+	if not id then return false end
+	local exists,_ = pcall(function()
+		go.get_position(id)
+	end)
+	return exists
+end
+
+-- Cache the message table to limit the amount of short-lived objects created
+local message = {}
+
+local function trigger_event(self, game_object_id, game_object_group, action, message_id)
+	message.id = game_object_id
+	message.group = game_object_group
+	for k,v in pairs(action) do
+		message[k] = v
+	end
+	local ok = cursor.trigger(message_id, message)
+	if ok then
+		if self.notify_own_gameobject then
+			msg.post(".", message_id, message)
+		end
+
+		-- pcall to check if the game object exists since it might have been deleted
+		-- typically a cursor_out message that is generated when the game object is deleted
+		local exists = go_exists(game_object_id)
+		if exists then
+			msg.post(game_object_id, message_id, message)
+		end
+	end
+	return ok
+end
+
+
+local function start_dragging(self, id, mode)
+	self.state.dragging = true
+	self.state.pressed_id = id
+	self.state.drag_mode = mode
+end
+
+
+function update(self, dt)
+	-- skip one frame to give the collision data a chance to properly update
+	-- after a press or release
+	if self.skip_frame then
+		self.skip_frame = false
+		self.collision_id = nil
+		self.collision_group = nil
+		return
+	end
+
+	--
+	-- EARLY RELEASE+OUT
+	-- if we are not dragging something and the thing we pressed is no longer under
+	-- the cursor it was either
+	-- 1. deleted by an OVER or PRESSED event
+	-- 2. not draggable and the cursor moved outside while pressed
+	-- in both cases we clear pressed and over state and generate an OUT event
+	if self.state.pressed and self.state.pressed_id and not self.collision_id and not self.state.dragging then
+		trigger_event(self, self.state.over_id, self.state.over_group, self.action, cursor.OUT)
+		clear_over_state(self)
+		if not go_exists(self.state.pressed_id) or self.state.dragging_cancelled then
+			clear_pressed_state(self)
+			clear_drag_state(self)
+		end
+	end
+
+	--
+	-- RELEASE
+	--
+	if self.released then
+		if self.state.pressed then
+			if self.state.dragging then
+				clear_drag_state(self)
+				trigger_event(self, self.state.pressed_id, self.state.pressed_group, self.action, cursor.DRAG_END)
+			elseif self.state.dragging_cancelled then
+				clear_drag_state(self)
+			elseif self.state.pressed_id == self.state.over_id then
+				trigger_event(self, self.state.pressed_id, self.state.pressed_group, self.action, cursor.CLICKED)
+			end
+			trigger_event(self, self.state.pressed_id, self.state.pressed_group, self.action, cursor.RELEASED)
+			clear_pressed_state(self)
+			-- release on mobile/touch screen should also trigger a cursor_out event
+			if self.mobile and self.state.over_id then
+				trigger_event(self, self.state.over_id, self.state.over_group, self.action, cursor.OUT)
+				clear_over_state(self)
+			end
+		end
+	end
+
+	--
+	-- OUT
+	--
+	if self.state.over_id and self.state.over_id ~= self.collision_id then
+		trigger_event(self, self.state.over_id, self.state.over_group, self.action, cursor.OUT)
+		clear_over_state(self)
+	end
+
+	--
+	-- OVER
+	--
+	-- over event should happen on non-mobile/touch screen when cursor is above collision
+	-- object or on mobile/touch screen while touching and moving finger over collision
+	-- object
+	if (not self.mobile or self.touch) and self.collision_id and self.state.over_id ~= self.collision_id then
+		if trigger_event(self, self.collision_id, self.collision_group, self.action, cursor.OVER) then
+			self.state.over_id = self.collision_id
+			self.state.over_group = self.collision_group
+		end
+	end
+
+	--
+	-- PRESSED
+	--
+	if self.pressed then
+		if not self.state.pressed then
+			if trigger_event(self, self.state.over_id, self.state.over_group, self.action, cursor.PRESSED) then
+				-- pressed on a game object
+				self.state.pressed = true
+				self.state.pressed_id = self.state.over_id
+				self.state.pressed_group = self.state.over_group
+				self.state.pressed_pos = go.get_position()
+				if self.state.over_id then
+					self.state.pressed_offset = self.state.pressed_pos - go.get_position(self.state.over_id)
+				else
+					self.state.pressed_offset = vmath.vector3()
+				end
+			end
+		end
+	end
+
+	--
+	-- DRAG
+	--
+	local cursor_pos = go.get_position()
+	if self.drag and self.state.pressed and not self.state.dragging_cancelled and not self.state.dragging then
+		-- handle axis locked drag operations
+		local mode = cursor.DRAG_MODE_FREE
+		local diff = cursor_pos - self.state.pressed_pos
+		if self.drag_lock_x and not self.drag_lock_y then
+			diff.y = 0
+			mode = cursor.DRAG_MODE_HORIZONTAL
+		elseif self.drag_lock_y and not self.drag_lock_x then
+			diff.x = 0
+			mode = cursor.DRAG_MODE_VERTICAL
+		elseif self.drag_lock_x and self.drag_lock_y then
+			if math.abs(diff.x) > math.abs(diff.y) then
+				diff.y = 0
+				mode = cursor.DRAG_MODE_HORIZONTAL
+			else
+				diff.x = 0
+				mode = cursor.DRAG_MODE_VERTICAL
+			end
+		end
+		-- start drag?
+		local distance = vmath.length(diff)
+		if distance >= self.drag_threshold then
+			self.action.origin_x = self.state.pressed_pos.x
+			self.action.origin_y = self.state.pressed_pos.y
+			if trigger_event(self, self.state.pressed_id, self.state.pressed_group, self.action, cursor.DRAG_START) then
+				start_dragging(self, self.state.pressed_id, mode)
+			else
+				self.state.dragging_cancelled = true
+			end
+		end
+	end
+
+	if self.state.dragging then
+		-- move the dragged object unless it has been deleted while being dragged
+		if self.state.pressed_id and not go_exists(self.state.pressed_id) then
+			clear_drag_state(self)
+			clear_pressed_state(self)
+			self.state.over_id = nil
+			trigger_event(self, self.state.pressed_id, self.state.pressed_group, self.action, cursor.DRAG_END)
+			trigger_event(self, self.state.pressed_id, self.state.pressed_group, self.action, cursor.RELEASED)
+		else
+			if not self.event_only_drag then
+				-- restrict movement to a single axis
+				if self.state.drag_mode == cursor.DRAG_MODE_HORIZONTAL then
+					cursor_pos.y = self.state.pressed_pos.y
+				elseif self.state.drag_mode == cursor.DRAG_MODE_VERTICAL then
+					cursor_pos.x = self.state.pressed_pos.x
+				end
+				-- retain the offset between the cursor and the dragged object and use the z value from the dragged object
+				if self.state.pressed_id then
+					cursor_pos.x = cursor_pos.x - self.state.pressed_offset.x
+					cursor_pos.y = cursor_pos.y - self.state.pressed_offset.y
+					cursor_pos.z = go.get_position(self.state.pressed_id).z
+					go.set_position(cursor_pos, self.state.pressed_id)
+				end
+				self.action.dx = self.state.pressed_pos.x - cursor_pos.x
+				self.action.dy = self.state.pressed_pos.y - cursor_pos.y
+			end
+			trigger_event(self, self.state.pressed_id, self.state.pressed_group, self.action, cursor.DRAG)
+		end
+	end
+
+	self.collision_id = nil
+	self.collision_group = nil
+	self.pressed = false
+	self.released = false
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == COLLISION_RESPONSE then
+		if self.collisionobject_filter == EMPTY_FILTER or self.collisionobject_filter == sender.fragment then
+			-- always pick the topmost collision object
+			-- but ignore the object we are dragging
+			-- we want to be able to get mouse over/out events while dragging
+			if not self.collision_id or go.get_position(self.collision_id).z < message.other_position.z then
+				if not self.state.dragging or (self.state.dragging and message.other_id ~= self.state.pressed_id) then
+					self.collision_id = message.other_id
+					self.collision_group = message.other_group
+				end
+			end
+		end
+	elseif message_id == cursor.START_DRAGGING then
+		start_dragging(self, message.id, message.mode or cursor.DRAG_MODE_FREE)
+	elseif message_id == INPUT then
+		handle_input(self, message.action_id, message.action)
+	end
+end
+
+function on_input(self, action_id, action)
+	-- we should only care about calls to on_input if we have specifically acquired input focus
+	-- if we haven't acquired input focus it is expected that input is sent via on_message from
+	-- some other script
+	if self.acquire_input_focus then
+		handle_input(self, action_id, action)
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end
