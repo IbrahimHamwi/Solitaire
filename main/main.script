@@ -81,17 +81,13 @@ function create_and_animate_card(self, card_id, pos_x, pos_y,delay,is_opened)
   go.set_scale(0.4, new_card_face)
   go.set_scale(0.42, new_card_back)  -- scale the card
   -------------------------------------  ------------------------------
-  local url = msg.url(nil, new_card, "card")
-  go.set(url, "is_opened", is_opened)
 
-  if is_opened == true then
-      msg.post(new_card_back, "disable")
-      msg.post(new_card_face, "enable")
-  else
-      msg.post(new_card_back, "enable")
-      msg.post(new_card_face, "disable")
-  end
-  msg.post(new_card_face, "play_animation", {id = hash(card_id)})
+  local script_url = msg.url(nil, new_card, "card")
+
+  -- go.set(script_url, "is_opened", is_opened)
+  msg.post(script_url, "set_card_id", {card_id = card_id})
+  msg.post(script_url, "set_opened", {is_opened = is_opened})
+
   duration = 1.0 
   go.animate(new_card, "position.x", go.PLAYBACK_ONCE_FORWARD, pos_x, go.EASING_LINEAR, duration, delay)
   go.animate(new_card, "position.y", go.PLAYBACK_ONCE_FORWARD, pos_y, go.EASING_LINEAR, duration, delay)

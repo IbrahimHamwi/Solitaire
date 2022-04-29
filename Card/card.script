@@ -6,21 +6,43 @@ go.property("is_opened", false)
 local function shake(self)
   go.cancel_animations(".", "scale.x")
   go.cancel_animations(".", "scale.y")
-  go.set_scale(self.initial_scale)
+  -- go.set_scale(self.initial_scale)
   local scale = go.get_scale()
   go.set_scale(scale * 1.2)
-  go.animate(".", "scale.x", go.PLAYBACK_ONCE_FORWARD, scale.x,go.EASING_OUTELASTIC, 0.8)
-  go.animate(".", "scale.y", go.PLAYBACK_ONCE_FORWARD, scale.y,go.EASING_OUTELASTIC, 0.8, 0,
-  function() go.set_scale(self.initial_scale) end)
+  go.animate(".", "scale.x", go.PLAYBACK_ONCE_FORWARD, scale.x,
+             go.EASING_OUTELASTIC, 0.8)
+  go.animate(".", "scale.y", go.PLAYBACK_ONCE_FORWARD, scale.y,
+             go.EASING_OUTELASTIC, 0.8, 0,
+             function() go.set_scale(self.initial_scale) end)
 end
 
-function init(self)
-  self.initial_scale = go.get_scale()
+function init(self) self.initial_scale = go.get_scale() end
+
+function set_opened(self, is_opened)
+  -- print("set_opened" .. (table.val_to_str(is_opened)))
+  self.is_opened = is_opened
+
+  if is_opened == true then
+    msg.post("back#back_sprite", "disable")
+    msg.post("face#face_sprite", "enable")
+    msg.post("#collisionobject", "enable")
+
+  else
+    msg.post("back#back_sprite", "enable")
+    msg.post("face#face_sprite", "disable")
+    msg.post("#collisionobject", "disable")
+  end
+
+end
+
+function set_card_id(self, card_id)
+  print("set_card_id" .. (table.val_to_str(card_id)))
+  msg.post("face", "play_animation", { id = hash(card_id) })
 end
 
 -- function on_input(self, action_id, action)
 --   
-  
+
 --   local pos = rendercam.screen_to_world_2d(action.x, action.y)
 --   action.x = pos.x
 --   action.y = pos.y
@@ -29,22 +51,27 @@ end
 -- end
 
 function on_message(self, message_id, message, sender)
-  
+  -- print("on_message:", message_id, message, sender)
   if message_id == cursor.OVER then
     self.over_pos = go.get_position()
     go.set_position(vmath.vector3(self.over_pos.x, self.over_pos.y, 1))
-    go.animate("face#face_sprite", "tint.w", go.PLAYBACK_ONCE_FORWARD, 1.5,go.EASING_OUTQUAD, 0.1)
+    -- go.animate("face#face_sprite", "tint.w", go.PLAYBACK_ONCE_FORWARD, 1.5,
+    --            go.EASING_OUTQUAD, 0.1)
     if self.is_opened == false then
-    print("on_message: skip closed card")
-    return
+      print("on_message: skip closed card")
+      return
     end
   elseif message_id == cursor.OUT then
     local pos = go.get_position()
     go.set_position(vmath.vector3(pos.x, pos.y, self.over_pos.z))
-    go.animate("face#face_sprite", "tint.w", go.PLAYBACK_ONCE_FORWARD, 1,go.EASING_OUTQUAD, 0.1)
+    -- go.animate("face#face_sprite", "tint.w", go.PLAYBACK_ONCE_FORWARD, 1,
+    --            go.EASING_OUTQUAD, 0.1)
   elseif message_id == cursor.PRESSED or message_id == cursor.RELEASED then
     shake(self)
     print("shake")
+  elseif message_id == hash("set_opened") then
+    set_opened(self, message.is_opened)
+  elseif message_id == hash("set_card_id") then
+    set_card_id(self, message.card_id)
   end
 end
-

@@ -126,6 +126,8 @@ local function trigger_event(self, game_object_id, game_object_group, action, me
 		-- typically a cursor_out message that is generated when the game object is deleted
 		local exists = go_exists(game_object_id)
 		if exists then
+      print("trigger_event: " .. message_id)
+      print("game_object_id: " .. game_object_id)
 			msg.post(game_object_id, message_id, message)
 		end
 	end
