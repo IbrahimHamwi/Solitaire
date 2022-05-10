@@ -1,37 +1,103 @@
 require("main.language_fixes")
 
-suits = {"_of_hearts", "_of_diamonds", "_of_clubs", "_of_spades"}
-values = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"}
-deck ={}
-
+suits = { "_of_hearts", "_of_diamonds", "_of_clubs", "_of_spades" }
+values = {
+  "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"
+}
+deck = {}
 
 function PlayCards()
-  deck=generateDeck()-- test the cards in the deck
-  deck=Shuffle(deck)
-  -- for i=1, #deck do
-  --   print(deck[i].value.." of "..deck[i].suit)
-  -- end
-  -- pprint(deck)
-end  
+  deck = generateDeck() -- test the cards in the deck
+  deck = Shuffle(deck)
+end
+
+stock1_card = nil
+stock2_card = nil
+stock3_card = nil
+
+function on_message(self, message_id, message, sender)
+  if message_id == hash("3Cards") then
+    local nextCard = deck[1]
+    table.remove(deck, 1)
+    print("3Cards" .. (table.val_to_str(nextCard)))
+    if stock1_card == nil then
+      target_pos1 = go.get_world_position("/stock1")
+      stock1_card = create_and_animate_card(self, nextCard.value, nextCard.suit,
+                                            target_pos1.x, target_pos1.y, 0.1,
+                                            true, 0.3)
+    elseif stock2_card == nil then
+      target_pos1 = go.get_world_position("/stock1")
+      target_pos2 = go.get_world_position("/stock2")
+      stock2_card = stock1_card
+
+      stock1_card = create_and_animate_card(self, nextCard.value, nextCard.suit,
+                                            target_pos1.x, target_pos1.y, 0.1,
+                                            true, 0.3)
+
+      go.animate(stock2_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos2,
+                 go.EASING_LINEAR, 0.3, 0.1)
+    elseif stock3_card == nil then
+      stock3_card = stock2_card
+      stock2_card = stock1_card
+      target_pos1 = go.get_world_position("/stock1")
+      target_pos2 = go.get_world_position("/stock2")
+      target_pos3 = go.get_world_position("/stock3")
+      stock1_card = create_and_animate_card(self, nextCard.value, nextCard.suit,
+                                            target_pos1.x, target_pos1.y, 0.1,
+                                            true, 0.3)
+
+      go.animate(stock2_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos2,
+                 go.EASING_LINEAR, 0.3, 0.1)
+
+      go.animate(stock3_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos3,
+                 go.EASING_LINEAR, 0.3, 0.1)
+    else
+      print("Stock is full")
+      local script_url = msg.url(nil, stock3_card, "card")
+
+      -- table.insert(deck, { suit = script_url.suit, value = script_url.value })
+      -- script_url.self_destruct()
+
+     
+      stock3_card = stock2_card
+      stock2_card = stock1_card
+      target_pos1 = go.get_world_position("/stock1")
+      target_pos2 = go.get_world_position("/stock2")
+      target_pos3 = go.get_world_position("/stock3")
+      stock1_card = create_and_animate_card(self, nextCard.value, nextCard.suit,
+                                            target_pos.x, target_pos.y, 0.1,
+                                            true, 0.3)
+
+      go.animate(stock2_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos2,
+                 go.EASING_LINEAR, 0.3, 0.1)
+
+      go.animate(stock3_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos3,
+                 go.EASING_LINEAR, 0.3, 0.1)
+
+
+    end
+
+  end
+end
 
 function Shuffle(deck)
-    local s = {}
-    for i = 1, #deck do s[i] = deck[i] end
-    for i = #deck, 2, -1 do
-        local j = math.random(i)
-        s[i], s[j] = s[j], s[i]
-    end
-    return s
+  local s = {}
+  for i = 1, #deck do s[i] = deck[i] end
+  for i = #deck, 2, -1 do
+    local j = math.random(i)
+    s[i], s[j] = s[j], s[i]
+  end
+  return s
 end
 
 function generateDeck()
   newdeck = {}
   for i, suit in ipairs(suits) do
     for j, value in ipairs(values) do
-      table.insert(newdeck, {suit = suit, value = value})
+      table.insert(newdeck, { suit = suit, value = value })
     end
   end
-  return newdeck  -- return the deck
+  return newdeck -- return the deck
 end
 
 function init(self)
@@ -40,20 +106,21 @@ function init(self)
   -- print("target_pos")
   -- print(target_pos.x)
   -- print(target_pos.y)
-  print("the first card is "..deck[1].value..deck[1].suit)
+  print("the first card is " .. deck[1].value .. deck[1].suit)
   -- target_pos = go.get_world_position("/6")
   -- create_and_animate_card(self, deck[1].value..deck[1].suit, target_pos.x, target_pos.y)
-  iteration=0
+  iteration = 0
 
-  for i=1,7 do
-    for j=i,7 do
+  for i = 1, 7 do
+    for j = i, 7 do
       -- iteration = iteration + 1
       -- print("iteration "..iteration)
-      target_pos = go.get_world_position("/"..j)
-      offsety=(i-1)*60
-      isopened = i==j
-      create_and_animate_card(self, deck[1].value..deck[1].suit, target_pos.x, target_pos.y-offsety,i/10,isopened)
-      table.remove(deck,1)
+      target_pos = go.get_world_position("/" .. j)
+      offsety = (i - 1) * 60
+      isopened = i == j
+      create_and_animate_card(self, deck[1].value, deck[1].suit, target_pos.x,
+                              target_pos.y - offsety, i / 10, isopened, 1)
+      table.remove(deck, 1)
       -- msg.post("/collection"..i.."/back#back_sprite", "enable")
       -- msg.post("/collection"..(iteration-1).."/back#back_sprite", "disable")
       -- msg.post("/collection"..(iteration-1).."/face#face_sprite", "enable")
@@ -61,35 +128,40 @@ function init(self)
   end
 end
 
-
 function on_input(self, action_id, action)
-	if action_id == hash("touch") and action.pressed then
-		print("Touch!")
-	end
+  if action_id == hash("touch") and action.pressed then print("Touch!") end
 end
 
-function create_and_animate_card(self, card_id, pos_x, pos_y,delay,is_opened)
+function create_and_animate_card(self, value, suit, pos_x, pos_y, delay,
+                                 is_opened, duration)
+  card_id = value .. suit
   print("create_and_animate_card")
 
-  new_card_ids = collectionfactory.create("#cardFactory" )
+  new_card_ids = collectionfactory.create("#cardFactory")
   -- pprint(new_card_ids)
   -- returns the identities of the spawned game objects as a table.
   -- The table keys map the hash of the collection-local id of each object to the runtime id of each object
   new_card = new_card_ids[hash("/Card")]
-  new_card_face = new_card_ids[hash("/face")]-- get the face of the card
-  new_card_back = new_card_ids[hash("/back")]-- get the back of the card
+  new_card_face = new_card_ids[hash("/face")] -- get the face of the card
+  new_card_back = new_card_ids[hash("/back")] -- get the back of the card
   go.set_scale(0.4, new_card_face)
-  go.set_scale(0.42, new_card_back)  -- scale the card
+  go.set_scale(0.42, new_card_back) -- scale the card
   -------------------------------------  ------------------------------
 
   local script_url = msg.url(nil, new_card, "card")
 
   -- go.set(script_url, "is_opened", is_opened)
-  msg.post(script_url, "set_card_id", {card_id = card_id})
-  msg.post(script_url, "set_opened", {is_opened = is_opened})
+  msg.post(script_url, "set_opened", { is_opened = is_opened })
+  msg.post(script_url, "set_suit", { suit = suit })
+  msg.post(script_url, "set_value", { value = value })
+  msg.post(script_url, "set_card_id", { card_id = card_id })
 
-  duration = 1.0 
-  go.animate(new_card, "position.x", go.PLAYBACK_ONCE_FORWARD, pos_x, go.EASING_LINEAR, duration, delay)
-  go.animate(new_card, "position.y", go.PLAYBACK_ONCE_FORWARD, pos_y, go.EASING_LINEAR, duration, delay)
+  target_pos = vmath.vector3(pos_x, pos_y, 0)
+
+  go.animate(new_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos,
+             go.EASING_LINEAR, duration, delay)
+
+  return new_card
+
 end
 
