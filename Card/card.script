@@ -2,11 +2,18 @@ local cursor = require "in.cursor"
 local rendercam = require "rendercam.rendercam"
 
 go.property("is_opened", false)
-go.property("suit", "")
-go.property("value", "")
+go.property("value", hash("ace")  )
+go.property("suit", hash("_of_spades"))
 
 function self_destruct(self)
-  go.delete({go.get_id(self)}, true)
+  -- go.delete({go.get_id(".")}, true)
+
+  -- TODO delete the card
+
+  msg.post("back#back_sprite", "disable")
+  msg.post("face#face_sprite", "disable")
+  msg.post("#collisionobject", "disable")
+
 end
 
 local function shake(self)
@@ -42,18 +49,18 @@ function set_opened(self, is_opened)
 end
 
 function set_card_id(self, card_id)
-  print("set_card_id" .. (table.val_to_str(card_id)))
+  print("set_card_id: " .. (table.val_to_str(card_id)))
   msg.post("face", "play_animation", { id = hash(card_id) })
 end
 
 function set_value(self, value)
-  self.value = value
-  print("set_value" .. (table.val_to_str(value)))
+  self.value = hash(value)
+  -- print("set_value " .. (table.val_to_str(value)))
 end
 
 function set_suit(self, suit)
-  self.suit = suit
-  print("set_suit" .. (table.val_to_str(suit)))
+  self.suit = hash(suit)
+  -- print("set_suit " .. (table.val_to_str(suit)))
 end
 
 -- function on_input(self, action_id, action)
@@ -93,5 +100,7 @@ function on_message(self, message_id, message, sender)
     set_value(self, message.value)
   elseif message_id == hash("set_suit") then
     set_suit(self, message.suit)
+  elseif message_id == hash("self_destruct") then
+    self_destruct(self)
   end
 end

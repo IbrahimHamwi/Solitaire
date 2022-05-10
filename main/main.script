@@ -4,6 +4,9 @@ suits = { "_of_hearts", "_of_diamonds", "_of_clubs", "_of_spades" }
 values = {
   "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"
 }
+suits_hash_map = {}
+values_hash_map = {}
+
 deck = {}
 
 function PlayCards()
@@ -36,6 +39,7 @@ function on_message(self, message_id, message, sender)
 
       go.animate(stock2_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos2,
                  go.EASING_LINEAR, 0.3, 0.1)
+
     elseif stock3_card == nil then
       stock3_card = stock2_card
       stock2_card = stock1_card
@@ -54,16 +58,22 @@ function on_message(self, message_id, message, sender)
     else
       print("Stock is full")
       local script_url = msg.url(nil, stock3_card, "card")
+      -- local script_obj = go.get_id(stock3_card)
 
-      -- table.insert(deck, { suit = script_url.suit, value = script_url.value })
-      -- script_url.self_destruct()
+      local old_value = values_hash_map[go.get(script_url, "value")]
+      local old_suit = suits_hash_map[go.get(script_url, "suit")]
 
-     
+      return_card = { suit = old_suit, value = old_value }
+      table.insert(deck, return_card)
+
+      msg.post(script_url, "self_destruct", {})
+
       stock3_card = stock2_card
       stock2_card = stock1_card
       target_pos1 = go.get_world_position("/stock1")
       target_pos2 = go.get_world_position("/stock2")
       target_pos3 = go.get_world_position("/stock3")
+
       stock1_card = create_and_animate_card(self, nextCard.value, nextCard.suit,
                                             target_pos.x, target_pos.y, 0.1,
                                             true, 0.3)
@@ -73,7 +83,6 @@ function on_message(self, message_id, message, sender)
 
       go.animate(stock3_card, "position", go.PLAYBACK_ONCE_FORWARD, target_pos3,
                  go.EASING_LINEAR, 0.3, 0.1)
-
 
     end
 
@@ -95,6 +104,8 @@ function generateDeck()
   for i, suit in ipairs(suits) do
     for j, value in ipairs(values) do
       table.insert(newdeck, { suit = suit, value = value })
+      suits_hash_map[hash(suit)] = suit
+      values_hash_map[hash(value)] = value
     end
   end
   return newdeck -- return the deck
